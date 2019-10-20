@@ -140,7 +140,7 @@ shape_colors = [(141, 0, 141), (0, 148, 0), (203, 20, 10), (200, 200, 0), (0, 32
 bag = [1, 1, 1, 1]  # Start bag with 4 Z pieces, emulating TGM1
 
 
-class Piece(object):
+class Block(object):
     def __init__(self, x, y, shape, grid):
         self.x = x
         self.y = y
@@ -175,18 +175,21 @@ class Piece(object):
         else:
             new_rotation -= 1
 
-        if self._valid_space(new_rotation):
-            self.rotation = new_rotation
-        else:  # Try wallkicking
-            self.x += 1  # Right
+        if self.y < 0:
             if self._valid_space(new_rotation):
                 self.rotation = new_rotation
-            else:
-                self.x -= 2  # Left
+            else:  # Try wallkicking
+                self.x += 1  # Right
                 if self._valid_space(new_rotation):
                     self.rotation = new_rotation
                 else:
-                    self.x += 2
+                    self.x -= 2  # Left
+                    if self._valid_space(new_rotation):
+                        self.rotation = new_rotation
+                    else:
+                        self.x += 2
+        else:
+            self.rotation = new_rotation
 
     def _valid_space(self, rotation=None):
         """Ensures that we don't move outside the grid, and that the grid position is not occupied"""
@@ -291,10 +294,10 @@ def get_shape(grid, first=False):
        Additionally, it never deals a S, Z, or O as the first piece."""
 
     if first:
-        new = Piece(5, 0, random.choice([I, J, L, T]), grid)
+        new = Block(5, 0, random.choice([I, J, L, T]), grid)
     else:
         for i in range(4):
-            new = Piece(5, 0, random.choice(shapes), grid)
+            new = Block(5, 0, random.choice(shapes), grid)
             if new.shape in bag:
                 continue
             else:
@@ -422,7 +425,7 @@ def draw_window(surface, grid, locked, score=0, last_score=0):
     pygame.draw.rect(surface, (255,0,0), (top_left_x, top_left_y, play_width, play_height), 5)
 
 
-def update_score(lines, level=1):
+def new_score(lines, level=1):
     combo = 1
     bravo = 1
 
@@ -439,7 +442,7 @@ def main(win):
     has_rotated = False
     clock = pygame.time.Clock()
     fall_time = 0
-    fall_speed = 4
+    fall_speed = 0.27
     gravity = 256
     level_time = 0
     lock_time = 0
@@ -454,7 +457,7 @@ def main(win):
         dt = clock.tick(60)
         fall_time += clock.get_rawtime()
         level_time += clock.get_rawtime()
-        if fall_time * 60 / gravity > fall_speed / gravity:
+        if fall_time / 1000 > fall_speed:
             fall_time = 0
             # Check if piece should lock and change to next piece
             current_piece.y += 1
@@ -535,7 +538,7 @@ def main(win):
             lines = clear_rows(grid, locked_positions)
             if lines > 0:
                 print(lines)
-                score += update_score(lines)
+                score += new_score(lines)
 
         draw_window(win, grid, score, high_score)
         draw_next_shape(next_piece, win)
@@ -545,8 +548,8 @@ def main(win):
             draw_text_middle("YOU LOST!", 80, (255,255,255), win)
             pygame.display.update()
             pygame.time.delay(1500)
-            run = False
             update_score(score)
+            run = False
 
         if pygame.event.get(pygame.QUIT):
             run = False
