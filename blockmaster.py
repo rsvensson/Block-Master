@@ -499,7 +499,6 @@ def main(win):
 
     while run:
         grid.grid = grid.create_grid()
-        playfield.grid = grid
 
         # Fall on delta time
         dt = clock.tick(60)
@@ -546,7 +545,6 @@ def main(win):
                         change_block = True
                         soft += clock.tick(60)
 
-
         grid.update(current_block)
         playfield.update(current_block, next_block, score, high_score, level)
 
@@ -558,15 +556,20 @@ def main(win):
                 p = (pos[0], pos[1])
                 grid.locked_positions[p] = current_block.color
 
-            # Scoring
+            # Handle scoring and redrawing of the screen if rows are removed
             lines = grid.clear_rows()
             if lines > 0:
                 combo += lines
                 score += new_score(lines, level, combo, soft)
+
+                # Remove the rows immediately
+                grid.grid = grid.create_grid()
+                playfield.update(current_block, next_block, score, high_score, level)
             else:
                 combo = 1
             soft = 1
 
+            # Reset variables for next block
             current_block = next_block
             next_block = get_block(grid)
             change_block = False
@@ -574,7 +577,6 @@ def main(win):
             lock_time = 0
 
             # Lock and ARE delay
-            #playfield.update(current_block, next_block, score, high_score, level)
             pygame.time.delay(lock_delay) if lines == 0 else pygame.time.delay(ARE_delay)
 
             level += 1
