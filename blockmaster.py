@@ -139,6 +139,38 @@ shape_colors = [(141, 0, 141), (0, 148, 0), (203, 20, 10), (200, 200, 0), (0, 32
 
 bag = [1, 1, 1, 1]  # Start bag with 4 Z pieces, emulating TGM1
 
+# Gravities to divide by 256 (To get level speed). Reaches 1 row per frame at lvl 251.
+LVL_GRAVITIES = {0: 4,
+                 30: 6,
+                 35: 8,
+                 40: 10,
+                 50: 12,
+                 60: 16,
+                 70: 32,
+                 80: 48,
+                 90: 64,
+                 100: 80,
+                 120: 96,
+                 140: 112,
+                 160: 128,
+                 170: 144,
+                 200: 4,
+                 220: 32,
+                 230: 64,
+                 233: 96,
+                 236: 128,
+                 239: 160,
+                 243: 192,
+                 247: 224,
+                 251: 256,
+                 300: 512,
+                 330: 768,
+                 360: 1024,
+                 400: 1280,
+                 420: 1024,
+                 450: 768,
+                 500: 5120}
+
 
 class Block(object):
     def __init__(self, x, y, shape, grid):
@@ -175,7 +207,7 @@ class Block(object):
         else:
             new_rotation -= 1
 
-        if self.y < 0:
+        if self.y > 0:
             if self._valid_space(new_rotation):
                 self.rotation = new_rotation
             else:  # Try wallkicking
@@ -187,7 +219,7 @@ class Block(object):
                     if self._valid_space(new_rotation):
                         self.rotation = new_rotation
                     else:
-                        self.x += 2
+                        self.x += 1
         else:
             self.rotation = new_rotation
 
@@ -206,8 +238,6 @@ class Block(object):
             if pos not in accepted_pos:
                 if pos[1] > -1:
                     return False
-                #if pos[0] > -1 and pos[0] < 10:
-                #    return False
 
         return True
 
@@ -296,16 +326,13 @@ class Playfield(object):
         self.block_size = self.pfield_width // 10
         self.surface = surface
         self.grid = grid
-        self.gravity = 4 / 256
-        self.ARE_delay = 41 * 16  # 41 frames @ 60hz
-        self.lock_delay = 30 * 16 # 30 frames @ 60hz
 
     def _draw_next_shape(self, block):
         font = pygame.font.SysFont("comicsans", 30)
         label = font.render("Next", 1, (255,255,255))
 
         sx = self.top_left_x + self.pfield_width + 50
-        sy = self.top_left_y + self.pfield_height / 2 - 100
+        sy = self.top_left_y
         format = block.shape[block.rotation % len(block.shape)]
 
         for i, line in enumerate(format):
@@ -315,9 +342,9 @@ class Playfield(object):
                     pygame.draw.rect(self.surface, block.color, (sx + j*block_size, sy + i*block_size, block_size, block_size), 0)
                     pygame.draw.rect(self.surface, (200,200,200), (sx + j * block_size, sy + i * block_size, block_size, block_size), 1)
 
-        self.surface.blit(label, (sx + 10, sy - 30))
+        self.surface.blit(label, (sx + 10, sy))
 
-    def _draw_window(self, score=0, last_score=0):
+    def _draw_window(self, score=0, last_score=0, level=0):
         self.surface.fill((0, 0, 0))
         pygame.font.init()
         font = pygame.font.SysFont('comicsans', 60)
@@ -328,16 +355,22 @@ class Playfield(object):
         font = pygame.font.SysFont("comicsans", 30)
         label = font.render("Score: " + str(score), 1, (255, 255, 255))
         sx = top_left_x + play_width + 50
-        sy = top_left_y + play_height / 2 - 100
-        self.surface.blit(label, (sx + 10, sy + 160))
+        sy = top_left_y + play_height / 2 + 100
+        self.surface.blit(label, (sx, sy))
 
         # High score
         label = font.render("High Score:", 1, (255, 255, 255))
         highscore = font.render(str(last_score), 1, (255, 255, 255))
-        sx = top_left_x - 200
-        sy = top_left_y + 300
-        self.surface.blit(label, (sx + 10, sy + 160))
-        self.surface.blit(highscore, (sx + 10, sy + 195))
+        sx = top_left_x + play_width + 50
+        sy = top_left_y + play_height / 2
+        self.surface.blit(label, (sx, sy))
+        self.surface.blit(highscore, (sx, sy + 20))
+
+        # Level
+        label = font.render("Level: " + str(level), 1, (255, 255, 255))
+        sx = top_left_x + play_width + 50
+        sy = top_left_y + play_height / 2 - 100
+        self.surface.blit(label, (sx, sy))
 
         # Blocks
         sx = self.top_left_x
@@ -365,8 +398,8 @@ class Playfield(object):
         pygame.display.update()
 
     def update(self, block: Block, next_block: Block,
-               score=0, high_score=0):
-        self._draw_window(score, high_score)
+               score=0, high_score=0, level=0):
+        self._draw_window(score, high_score, level)
         self._draw_next_shape(next_block)
         pygame.display.update()
 
@@ -417,11 +450,8 @@ def max_score():
     return int(score)
 
 
-def new_score(lines, level=1):
-    combo = 1
-    bravo = 1
-
-    return math.ceil((level + lines) / 4) * lines * bravo
+def new_score(lines, level=1, combo=1, soft=1, bravo=1):
+    return math.ceil(((level + lines) / 4) + soft) * lines * combo * bravo
 
 
 def main_menu(win):
@@ -459,8 +489,13 @@ def main(win):
     level_time = 0
     lock_time = 0
     lock = False
+
+    # Scoring variables
     high_score = max_score()
     score = 0
+    level = 1
+    soft = 1
+    combo = 1
 
     while run:
         grid.grid = grid.create_grid()
@@ -509,9 +544,11 @@ def main(win):
                 if keys[pygame.K_DOWN]:
                     if not current_block.move("down"):
                         change_block = True
+                        soft += clock.tick(60)
+
 
         grid.update(current_block)
-        playfield.update(current_block, next_block, score, high_score)
+        playfield.update(current_block, next_block, score, high_score, level)
 
         # Block hit ground
         if change_block:
@@ -524,7 +561,11 @@ def main(win):
             # Scoring
             lines = grid.clear_rows()
             if lines > 0:
-                score += new_score(lines)
+                combo += lines
+                score += new_score(lines, level, combo, soft)
+            else:
+                combo = 1
+            soft = 1
 
             current_block = next_block
             next_block = get_block(grid)
@@ -533,7 +574,10 @@ def main(win):
             lock_time = 0
 
             # Lock and ARE delay
+            #playfield.update(current_block, next_block, score, high_score, level)
             pygame.time.delay(lock_delay) if lines == 0 else pygame.time.delay(ARE_delay)
+
+            level += 1
 
         if grid.check_lost():
             playfield.draw_text_middle("YOU LOST!", 80, (255,255,255))
@@ -541,9 +585,15 @@ def main(win):
             update_score(score)
             run = False
 
+        if level == 1000:
+            playfield.draw_text_middle("YOU WON!!", 80, (255,255,255))
+            pygame.time.delay(2000)
+            update_score(score)
+            run = False
+
 
 if __name__ == "__main__":
     win = pygame.display.set_mode((s_width, s_height))
-    pygame.display.set_caption("Blockmaster")
+    pygame.display.set_caption("Block Master")
     pygame.key.set_repeat(256, 17)
     main_menu(win)
