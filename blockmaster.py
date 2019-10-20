@@ -233,8 +233,161 @@ class Block(object):
         return positions
 
 
+class Input(object):
+    def __init__(self):
+        pass
+
+    def move(self, direction):
+        pass
+
+
+class Playfield(object):
+    def __init__(self, x, y, width, height, surface):
+        self.top_left_x = x
+        self.top_left_y = y
+        self.pfield_width = width
+        self.pfield_height = height
+        self.block_size = self.pfield_width // 10
+        self.locked_positions={}
+        self.grid = self._create_grid()
+        self.gravity = 4 / 256
+        self.ARE_delay = 41 * 16  # 41 frames @ 60hz
+        self.lock_delay = 30 * 16 # 30 frames @ 60hz
+        self.surface = surface
+
+    def _create_grid(self):
+        grid = [[(0,0,0) for x in range(grid_size[0])] for x in range(grid_size[1])]
+
+        for i in range(len(grid)):
+            for j in range(len(grid[i])):
+                if (j, i) in self.locked_positions:
+                    c = self.locked_positions[(j, i)]
+                    grid[i][j] = c
+
+        return grid
+
+    def _check_lost(self):
+        for pos in self.locked_positions:
+            x, y = pos
+            if y < 1:  # Above grid
+                return True
+
+        return False
+
+    def _clear_rows(self):
+        inc = 0  # How many rows to shift down
+        for i in range(len(self.grid) - 1, -1, -1):  # Start check grid from below
+            row = self.grid[i]
+            if (0, 0, 0) not in row:
+                inc += 1
+                ind = i  # Index of row that is removed
+                for j in range(len(row)):
+                    del self.locked_positions[(j, i)]  # Remove the block from locked positions
+
+        # Shift down above rows
+        if inc > 0:
+            for key in sorted(list(self.locked_positions), key=lambda x: x[1])[::-1]:  # Check locked from below to prevent overwriting keys
+                x, y = key
+                if y < ind:
+                    new_key = (x, y + inc)  # Create new keys for rows above the one we deleted
+                    self.locked_positions[new_key] = self.locked_positions.pop(key)  # Insert old blocks into new locked position and remove old positions
+
+        # Lock and ARE delay
+        pygame.time.delay(self.lock_delay) if inc == 0 else pygame.time.delay(self.ARE_delay)
+
+        return inc
+
+    def _draw_next_shape(self, block):
+        font = pygame.font.SysFont("comicsans", 30)
+        label = font.render("Next", 1, (255,255,255))
+
+        sx = self.top_left_x + self.pfield_width + 50
+        sy = self.top_left_y + self.pfield_height / 2 - 100
+        format = block.shape[block.rotation % len(block.shape)]
+
+        for i, line in enumerate(format):
+            row = list(line)
+            for j, col in enumerate(row):
+                if col == "0":
+                    pygame.draw.rect(self.surface, block.color, (sx + j*block_size, sy + i*block_size, block_size, block_size), 0)
+                    pygame.draw.rect(self.surface, (200,200,200), (sx + j * block_size, sy + i * block_size, block_size, block_size), 1)
+
+        self.surface.blit(label, (sx + 10, sy - 30))
+
+    def _draw_window(self, score=0, last_score=0):
+        self.surface.fill((0, 0, 0))
+        pygame.font.init()
+        font = pygame.font.SysFont('comicsans', 60)
+        label = font.render("Blockmaster", 1, (255, 255, 255))
+        self.surface.blit(label, (top_left_x + play_width / 2 - label.get_width() / 2, 30))
+
+        # Current score
+        font = pygame.font.SysFont("comicsans", 30)
+        label = font.render("Score: " + str(score), 1, (255, 255, 255))
+        sx = top_left_x + play_width + 50
+        sy = top_left_y + play_height / 2 - 100
+        self.surface.blit(label, (sx + 10, sy + 160))
+
+        # High score
+        label = font.render("High Score:", 1, (255, 255, 255))
+        highscore = font.render(str(last_score), 1, (255, 255, 255))
+        sx = top_left_x - 200
+        sy = top_left_y + 300
+        self.surface.blit(label, (sx + 10, sy + 160))
+        self.surface.blit(highscore, (sx + 10, sy + 195))
+
+        sx = self.top_left_x
+        sy = self.top_left_y
+        for i in range(len(self.grid)):
+            for j in range(len(self.grid[i])):
+                pygame.draw.rect(self.surface, self.grid[i][j],
+                                 (sx + j * self.block_size, sy + i * self.block_size, self.block_size, self.block_size), 0)
+                if not self.grid[i][j] == (0, 0, 0):  # Draw white lines on blocks
+                    pygame.draw.rect(self.surface, (200, 200, 200),
+                                     (sx + j * self.block_size, sy + i * self.block_size, self.block_size, self.block_size), 1)
+
+        # Playfield border
+        pygame.draw.rect(self.surface, (255, 0, 0), (sx, sy, self.pfield_width, self.pfield_height), 5)
+
+    def _draw_text_middle(self, text, size, color):
+        font = pygame.font.SysFont("comicsans", size, bold=True)
+        label = font.render(text, 1, color)
+
+        sx = self.top_left_x
+        sy = self.top_left_y
+
+        self.surface.blit(label, (sx + self.pfield_width / 2 - (label.get_width() / 2),
+                                  sy + self.pfield_height / 2 - (label.get_height() * 2)))
+
+    def update(self, block: Block, next_block: Block, change_block: bool,
+               score=0, high_score=0):
+        self.grid = self._create_grid()
+
+        # Add color of piece to the grid for drawing
+        shape_pos = convert_shape_format(block)
+        for i in range(len(shape_pos)):
+            x, y = shape_pos[i]
+            if y > -1:  # If not above the grid
+                self.grid[y][x] = block.color
+
+        if change_block:
+            # Add current block to locked positions in grid
+            for pos in shape_pos:
+                p = (pos[0], pos[1])
+                self.locked_positions[p] = block.color
+                change_block = False
+
+        self._draw_window(score, high_score)
+        self._draw_next_shape(next_block)
+        pygame.display.update()
+
+        if self._check_lost():
+            self._draw_text_middle("YOU LOST!", 80, (255,255,255))
+            pygame.display.update()
+            pygame.time.delay(2000)
+
 def create_grid(locked_positions={}):
-    grid = [[(0,0,0) for x in range(10)] for x in range(20)]
+    grid = [[(0,0,0) for x in range(grid_size[0])] for x in range(grid_size[1])]
 
     for i in range(len(grid)):
         for j in range(len(grid[i])):
@@ -314,7 +467,7 @@ def draw_text_middle(text, size, color, surface):
     font = pygame.font.SysFont("comicsans", size, bold=True)
     label = font.render(text, 1, color)
 
-    surface.blit(label, (top_left_x + play_width / 2 - (label.get_width()/2), top_left_y + play_height/2 - label.get_height()/2))
+    surface.blit(label, (top_left_x + play_width / 2 - (label.get_width()/2), top_left_y + play_height/2 - label.get_height()*2))
 
 
 def clear_rows(grid, locked):
