@@ -3,20 +3,17 @@ import math
 import pygame
 import random
 
-# creating the data structure for pieces
-# setting up global vars
-# functions
-# - create_grid
-# - draw_grid
-# - draw_window
-# - rotating shape in main
-# - setting up the main
-
 """
 10 x 20 square grid
 shapes: S, Z, I, O, J, L, T
 represented in order by 0 - 6
 """
+
+# TODO: Fix fall speed
+# TODO: Block can rotate into other blocks
+# TODO: Occasional glitch when clearing rows
+# TODO: Implement grade system
+# TODO: Fix the scoring system
 
 pygame.font.init()
 
@@ -25,7 +22,7 @@ s_width = 800
 s_height = 700
 play_width = 300  # meaning 300 // 10 = 30 width per block
 play_height = 600  # meaning 600 // 20 = 20 height per block
-block_size = 30
+block_size = 300 // 10
 grid_size = (10, 20)  # 10 x 20 grid
 
 top_left_x = (s_width - play_width) // 2
