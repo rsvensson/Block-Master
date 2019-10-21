@@ -522,7 +522,7 @@ def main(win):
 
         if lock:
             lock_time += dt
-            print (lock_time, 30*16)
+            # print(lock_time, 30*16)
             if lock_time > 30*16:
                 change_block = True
 
