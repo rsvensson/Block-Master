@@ -488,13 +488,11 @@ def main(win):
     next_block = get_block(playfield.grid)
     has_rotated = False
     clock = pygame.time.Clock()
-    fall_time = 0
-    fall_speed = 0.27
     ARE_delay = 41 * 16  # ~41 frames @ 60hz
     lock_delay = 30 * 16  # ~30 frames @ 60hz
-    level_time = 0
     lock_time = 0
     lock = False
+    fall_time = 0
 
     # Scoring variables
     high_score = max_score()
@@ -523,8 +521,9 @@ def main(win):
                 lock = False
 
         if lock:
-            lock_time += clock.get_rawtime()
-            if lock_time * 60 > 30*16*dt:
+            lock_time += dt
+            print (lock_time, 30*16)
+            if lock_time > 30*16:
                 change_block = True
 
         for event in pygame.event.get():
