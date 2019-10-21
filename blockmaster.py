@@ -9,11 +9,11 @@ shapes: S, Z, I, O, J, L, T
 represented in order by 0 - 6
 """
 
-# TODO: Fix fall speed
-# TODO: Block can rotate into other blocks
 # TODO: Occasional glitch when clearing rows
 # TODO: Implement grade system
-# TODO: Fix the scoring system
+# TODO: Wall kicks still don't behave quite as they should
+# TODO: Lock timer needs to be implemented better
+# TODO: Blocks don't fall instantly to the bottom on level 500+
 
 pygame.font.init()
 
