@@ -499,12 +499,11 @@ def main(win):
     # Scoring variables
     high_score = max_score()
     score = 0
-    level = 1
+    level = 0
     soft = 1
     combo = 1
 
     # Fall speed
-    #gravity = INTERNAL_GRAVITY[0] / DENOMINATOR * MAX_FPS * 16
     gravity = DENOMINATOR / INTERNAL_GRAVITY[0]
 
     while run:
@@ -525,7 +524,7 @@ def main(win):
 
         if lock:
             lock_time += clock.get_rawtime()
-            if lock_time * 60 > 30*16 * dt:
+            if lock_time * 60 > 30*16*dt:
                 change_block = True
 
         for event in pygame.event.get():
@@ -593,10 +592,13 @@ def main(win):
             lock_time = 0
 
             # Check gravity
-            gkeys = list(INTERNAL_GRAVITY.keys())
-            for i in range(len(gkeys)):
-                if gkeys[i] == level or gkeys[i] < level < gkeys[i+1]:
-                    gravity = DENOMINATOR / INTERNAL_GRAVITY[gkeys[i]]
+            if level <= 500:  # Level 500 and above is max speed
+                gkeys = list(INTERNAL_GRAVITY.keys())
+                for i in range(len(gkeys)):
+                    if gkeys[i] == level or gkeys[i] < level < gkeys[i+1]:
+                        gravity = DENOMINATOR / INTERNAL_GRAVITY[gkeys[i]]
+            else:
+                gravity = DENOMINATOR / INTERNAL_GRAVITY[500]
 
             # Lock and ARE delay
             pygame.time.delay(lock_delay) if lines == 0 else pygame.time.delay(ARE_delay)
