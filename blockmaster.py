@@ -512,7 +512,7 @@ def main(win):
         # Fall on delta time
         dt = clock.tick(MAX_FPS)
         fall_time += clock.get_rawtime()
-        print(gravity, dt, fall_time)
+        # print(gravity, dt, fall_time)
         if fall_time / dt > gravity:
             fall_time = 0
             if not current_block.move("down") and current_block.y > 0:
