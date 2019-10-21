@@ -305,7 +305,7 @@ class Grid(object):
     def check_lost(self):
         for pos in self.locked_positions:
             x, y = pos
-            if y < 1:  # Above grid
+            if y < 0:  # Above grid
                 print("Hep!")
                 return True
 
@@ -513,16 +513,15 @@ def main(win):
         # print(gravity, dt, fall_time)
         if fall_time / dt > gravity:
             fall_time = 0
-            if not current_block.move("down") and current_block.y > 0:
+            if not current_block.move("down"):
                 lock = True
             else:
-                # Should reset lock timer but is not quite enough because it keeps counting
-                # until the block has actually fallen.
                 lock = False
+                lock_time = 0
 
         if lock:
             lock_time += dt
-            # print(lock_time, 30*16)
+            #print(lock_time, 30*16)
             if lock_time > 30*16:
                 change_block = True
 
@@ -562,26 +561,32 @@ def main(win):
 
         # Block hit ground
         if change_block:
-            # Add current piece to locked positions in grid
-            shape_pos = current_block.convert_shape_format()
-            for pos in shape_pos:
-                p = (pos[0], pos[1])
-                grid.locked_positions[p] = current_block.color
-
-            # Handle scoring and redrawing of the screen if rows are removed
-            lines = grid.clear_rows()
-            if lines > 0:
-                combo += lines
-                score += new_score(lines, level, combo, soft)
-                level += lines
-
-                # Remove the rows immediately
-                grid.grid = grid.create_grid()
-                playfield.update(current_block, next_block, score, high_score, level)
+            # Double check if we should really change block. Not sure if needed.
+            if current_block.move("down"):
+                lock_time = 0
+                lock = False
+                change_block = False
             else:
-                combo = 1
-                level += 1
-            soft = 1
+                # Add current piece to locked positions in grid
+                shape_pos = current_block.convert_shape_format()
+                for pos in shape_pos:
+                    p = (pos[0], pos[1])
+                    grid.locked_positions[p] = current_block.color
+
+                # Handle scoring and redrawing of the screen if rows are removed
+                lines = grid.clear_rows()
+                if lines > 0:
+                    combo += lines
+                    score += new_score(lines, level, combo, soft)
+                    level += lines
+
+                    # Remove the rows immediately
+                    grid.grid = grid.create_grid()
+                    playfield.update(current_block, next_block, score, high_score, level)
+                else:
+                    combo = 1
+                    level += 1
+                soft = 1
 
             # Reset variables for next block
             current_block = next_block
