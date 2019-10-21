@@ -504,7 +504,8 @@ def main(win):
     combo = 1
 
     # Fall speed
-    gravity = INTERNAL_GRAVITY[0] / DENOMINATOR * MAX_FPS * 16
+    #gravity = INTERNAL_GRAVITY[0] / DENOMINATOR * MAX_FPS * 16
+    gravity = DENOMINATOR / INTERNAL_GRAVITY[0]
 
     while run:
         grid.grid = grid.create_grid()
@@ -513,11 +514,14 @@ def main(win):
         dt = clock.tick(MAX_FPS)
         fall_time += clock.get_rawtime()
         print(gravity, dt, fall_time)
-        if fall_time / dt > gravity\
-                :
+        if fall_time / dt > gravity:
             fall_time = 0
             if not current_block.move("down") and current_block.y > 0:
                 lock = True
+            else:
+                # Should reset lock timer but is not quite enough because it keeps counting
+                # until the block has actually fallen.
+                lock = False
 
         if lock:
             lock_time += clock.get_rawtime()
@@ -591,10 +595,8 @@ def main(win):
             # Check gravity
             gkeys = list(INTERNAL_GRAVITY.keys())
             for i in range(len(gkeys)):
-                if gkeys[i] == level:
-                    gravity = INTERNAL_GRAVITY[gkeys[i]] / DENOMINATOR * MAX_FPS * 16
-                elif gkeys[i] < level < gkeys[i+1]:
-                    gravity = INTERNAL_GRAVITY[gkeys[i]] / DENOMINATOR * MAX_FPS * 16
+                if gkeys[i] == level or gkeys[i] < level < gkeys[i+1]:
+                    gravity = DENOMINATOR / INTERNAL_GRAVITY[gkeys[i]]
 
             # Lock and ARE delay
             pygame.time.delay(lock_delay) if lines == 0 else pygame.time.delay(ARE_delay)
