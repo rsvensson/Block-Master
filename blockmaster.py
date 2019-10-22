@@ -283,22 +283,26 @@ class Grid(object):
 
     def clear_rows(self) -> int:
         self.grid = self.create_grid()
-        inc = 0  # How many rows to shift down
+        rows = []  # Rows to remove
+        inc = 0  # How many rows were removed
         for i in range(len(self.grid) - 1, -1, -1):  # Start check grid from below
             row = self.grid[i]
             if (0, 0, 0) not in row:
                 inc += 1
-                ind = i  # Index of row that is removed
+                rows.append(i)  # Index of row that is removed
                 for j in range(len(row)):
                     del self.locked_positions[(j, i)]  # Remove the block from locked positions
 
         # Shift down rows above inc
         if inc > 0:
-            for key in sorted(list(self.locked_positions), key=lambda x: x[1])[::-1]:  # Check positions from below to prevent overwriting keys
-                x, y = key
-                if y < ind:
-                    new_key = (x, y + inc)  # Create new keys for rows above the one we deleted
-                    self.locked_positions[new_key] = self.locked_positions.pop(key)  # Insert old blocks into new locked position and remove old positions
+            for _ in range(len(rows)):
+                row = rows.pop()
+                # Sort positions by y-value backwards and go through the list bottom-to-top
+                for key in sorted(list(self.locked_positions), key=lambda x: x[1])[::-1]:
+                    x, y = key
+                    if y < row:  # Below the row that we removed
+                        new_key = (x, y + 1)
+                        self.locked_positions[new_key] = self.locked_positions.pop(key)
 
         return inc
 
@@ -318,6 +322,7 @@ class Grid(object):
            x, y = shape_pos[i]
            if y > -1:  # If not above the grid
                self.grid[y][x] = block.color
+
 
 class Playfield(object):
     def __init__(self, surface, x, y, width, height, grid: Grid):
