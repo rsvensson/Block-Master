@@ -594,7 +594,7 @@ def main(win):
 
                 # Update the rows immediately
                 grid.grid = grid.create_grid()
-                playfield.update(current_block, next_block, score, high_score, level)
+                playfield.update(current_block, next_block, score, high_score, level-lines-1)  # Don't update level until next loop
 
             # Reset variables for next block
             current_block = next_block
