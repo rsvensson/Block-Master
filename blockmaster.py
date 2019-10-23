@@ -522,9 +522,6 @@ def main(win):
             fall_time = 0
             if not current_block.move("down"):
                 lock = True
-            else:
-                lock = False
-                lock_time = 0
 
         if lock:
             lock_time += dt
