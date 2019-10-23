@@ -12,6 +12,7 @@ represented in order by 0 - 6
 # TODO: Implement grade system
 # TODO: Wall kicks still don't behave quite as they should
 # TODO: Blocks don't fall instantly to the bottom on level 500+
+# TODO: There's still some occasional glitches with the clear_rows method
 
 pygame.font.init()
 
@@ -593,7 +594,8 @@ def main(win):
 
                 # Update the rows immediately
                 grid.grid = grid.create_grid()
-                playfield.update(current_block, next_block, score, high_score, level-lines-1)  # Don't update level until next loop
+                playfield.update(current_block, next_block, score, high_score,
+                                 level-lines-1 if lines == 0 else level-lines)  # Don't update level until next loop
 
                 # Reset variables for next block
                 current_block = next_block
