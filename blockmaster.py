@@ -11,7 +11,6 @@ represented in order by 0 - 6
 
 # TODO: Implement grade system
 # TODO: Wall kicks still don't behave quite as they should
-# TODO: Lock timer needs to be implemented better
 # TODO: Blocks don't fall instantly to the bottom on level 500+
 
 pygame.font.init()
@@ -568,7 +567,7 @@ def main(win):
 
         # Block hit ground
         if change_block:
-            # Double check if we should really change block. Not sure if needed.
+            # Double check if we should really change block.
             if current_block.move("down"):
                 lock_time = 0
                 lock = False
@@ -596,24 +595,24 @@ def main(win):
                 grid.grid = grid.create_grid()
                 playfield.update(current_block, next_block, score, high_score, level-lines-1)  # Don't update level until next loop
 
-            # Reset variables for next block
-            current_block = next_block
-            next_block = get_block(grid)
-            change_block = False
-            lock = False
-            lock_time = 0
+                # Reset variables for next block
+                current_block = next_block
+                next_block = get_block(grid)
+                change_block = False
+                lock = False
+                lock_time = 0
 
-            # Check gravity
-            if level <= 500:  # Level 500 and above is max speed
-                gkeys = list(INTERNAL_GRAVITY.keys())
-                for i in range(len(gkeys)):
-                    if gkeys[i] == level or gkeys[i] < level < gkeys[i+1]:
-                        gravity = DENOMINATOR / INTERNAL_GRAVITY[gkeys[i]]
-            else:
-                gravity = DENOMINATOR / INTERNAL_GRAVITY[500]
+                # Check gravity
+                if level <= 500:  # Level 500 and above is max speed
+                    gkeys = list(INTERNAL_GRAVITY.keys())
+                    for i in range(len(gkeys)):
+                        if gkeys[i] == level or gkeys[i] < level < gkeys[i+1]:
+                            gravity = DENOMINATOR / INTERNAL_GRAVITY[gkeys[i]]
+                else:
+                    gravity = DENOMINATOR / INTERNAL_GRAVITY[500]
 
-            # Lock and ARE delay
-            pygame.time.delay(lock_delay) if lines == 0 else pygame.time.delay(ARE_delay)
+                # Lock and ARE delay
+                pygame.time.delay(lock_delay) if lines == 0 else pygame.time.delay(ARE_delay)
 
         if grid.check_lost():
             playfield.draw_text_middle("YOU LOST!", 80, (255,255,255))
