@@ -9,7 +9,6 @@ shapes: S, Z, I, O, J, L, T
 represented in order by 0 - 6
 """
 
-# TODO: Occasional glitch when clearing rows
 # TODO: Implement grade system
 # TODO: Wall kicks still don't behave quite as they should
 # TODO: Lock timer needs to be implemented better
@@ -134,7 +133,8 @@ T = [['.....',
       '.....']]
 
 shapes = [S, Z, I, O, J, L, T]
-shape_colors = [(141, 0, 141), (0, 148, 0), (203, 20, 10), (200, 200, 0), (0, 32, 190), (200, 85, 0), (0, 130, 175)]
+shape_colors = [(141, 0, 141), (0, 148, 0), (200, 20, 10), (200, 200, 0), (0, 32, 190), (200, 85, 0), (0, 130, 175)]
+shape_colors_locked = [(90, 0, 90), (0, 80, 0), (125, 0, 0), (90, 90, 0), (0, 15, 110), (90, 40, 0), (0, 70, 100)]
 # index 0 - 6 represent shape
 
 bag = [1, 1, 1, 1]  # Start bag with 4 Z pieces, emulating TGM1
@@ -180,6 +180,7 @@ class Block(object):
         self.shape = shape
         self.grid = grid
         self.color = shape_colors[shapes.index(shape)]
+        self.locked_color = shape_colors_locked[shapes.index(shape)]
         self.rotation = 0
 
     def move(self, direction):
@@ -384,7 +385,11 @@ class Playfield(object):
                 pygame.draw.rect(self.surface, self.grid.grid[i][j],
                                  (sx + j * self.block_size, sy + i * self.block_size, self.block_size, self.block_size), 0)
                 if not self.grid.grid[i][j] == (0, 0, 0):  # Draw white lines on blocks
-                    pygame.draw.rect(self.surface, (200, 200, 200),
+                    line_color = (200, 200, 200)
+                    if self.grid.grid[i][j] in shape_colors_locked:
+                        line_color = (128, 128, 128)
+
+                    pygame.draw.rect(self.surface, line_color,
                                      (sx + j * self.block_size, sy + i * self.block_size, self.block_size, self.block_size), 1)
 
         # Playfield border
@@ -573,7 +578,7 @@ def main(win):
                 shape_pos = current_block.convert_shape_format()
                 for pos in shape_pos:
                     p = (pos[0], pos[1])
-                    grid.locked_positions[p] = current_block.color
+                    grid.locked_positions[p] = current_block.locked_color
 
                 # Handle scoring and redrawing of the screen if rows are removed
                 lines = grid.clear_rows()
@@ -582,13 +587,14 @@ def main(win):
                     score += new_score(lines, level, combo, soft)
                     level += lines
 
-                    # Remove the rows immediately
-                    grid.grid = grid.create_grid()
-                    playfield.update(current_block, next_block, score, high_score, level)
                 else:
                     combo = 1
                     level += 1
                 soft = 1
+
+                # Update the rows immediately
+                grid.grid = grid.create_grid()
+                playfield.update(current_block, next_block, score, high_score, level)
 
             # Reset variables for next block
             current_block = next_block
