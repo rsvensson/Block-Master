@@ -208,21 +208,18 @@ class Block(object):
         else:
             new_rotation -= 1
 
-        if self.y > 0:
+        if self._valid_space(new_rotation):
+            self.rotation = new_rotation
+        else:  # Try wallkicking
+            self.x += 1  # Right
             if self._valid_space(new_rotation):
                 self.rotation = new_rotation
-            else:  # Try wallkicking
-                self.x += 1  # Right
+            else:
+                self.x -= 2  # Left
                 if self._valid_space(new_rotation):
                     self.rotation = new_rotation
                 else:
-                    self.x -= 2  # Left
-                    if self._valid_space(new_rotation):
-                        self.rotation = new_rotation
-                    else:
-                        self.x += 1
-        else:
-            self.rotation = new_rotation
+                    self.x += 1
 
     def _valid_space(self, rotation=None):
         """Ensures that we don't move outside the grid, and that the grid position is not occupied"""
@@ -293,11 +290,11 @@ class Grid(object):
                 for j in range(len(row)):
                     del self.locked_positions[(j, i)]  # Remove the block from locked positions
 
-        # Shift down rows above inc
+        # Shift down rows in the grid
         if inc > 0:
             for _ in range(len(rows)):
                 row = rows.pop()
-                # Sort positions by y-value backwards and go through the list bottom-to-top
+                # Sort positions by y-value and go through the list bottom-to-top
                 for key in sorted(list(self.locked_positions), key=lambda x: x[1])[::-1]:
                     x, y = key
                     if y < row:  # Below the row that we removed
@@ -514,9 +511,9 @@ def main(win):
 
         # Fall on delta time
         dt = clock.tick(MAX_FPS)
-        fall_time += clock.get_rawtime()
-        # print(gravity, dt, fall_time)
-        if fall_time / dt > gravity:
+        fall_time += dt
+        #print(gravity * dt, dt, fall_time)
+        if fall_time > gravity * dt:
             fall_time = 0
             if not current_block.move("down"):
                 lock = True
