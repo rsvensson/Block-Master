@@ -501,6 +501,14 @@ def main(win):
     lock = False
     fall_time = 0
 
+    # Movement
+    imove = True  # Initial move
+    moving = False
+    mleft = False
+    mright = False
+    mdown = False
+    mtime = 0
+
     # Scoring variables
     high_score = max_score()
     score = 0
@@ -517,7 +525,6 @@ def main(win):
         # Fall on delta time
         dt = clock.tick(MAX_FPS)
         fall_time += dt
-        #print(gravity * dt, dt, fall_time)
         if fall_time > gravity * dt:
             fall_time = 0
             if not current_block.move("down"):
@@ -528,10 +535,10 @@ def main(win):
 
         if lock:
             lock_time += dt
-            #print(lock_time, 30*16)
             if lock_time > 30*16:
                 change_block = True
 
+        # User input
         for event in pygame.event.get():
             # Quitting
             if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:
@@ -539,29 +546,76 @@ def main(win):
             else:
                 if event.type == pygame.MOUSEMOTION:
                     continue
-                # Handle rotation
-                if event.type == pygame.KEYDOWN and not has_rotated:
-                    if event.key == pygame.K_z:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_z and not has_rotated:
                         current_block.rotate("left")
                         has_rotated = True
-                    if event.key == pygame.K_x:
+                    if event.key == pygame.K_x and not has_rotated:
                         current_block.rotate("right")
                         has_rotated = True
+                    if event.key == pygame.K_LEFT:
+                        mleft = True
+                    if event.key == pygame.K_RIGHT:
+                        mright = True
+                    if event.key == pygame.K_DOWN:
+                        mdown = True
+                        soft += dt
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_z or event.key == pygame.K_x:
                         has_rotated = False
+                    if event.key == pygame.K_LEFT:
+                        mleft = False
+                    if event.key == pygame.K_RIGHT:
+                        mright = False
                     if event.key == pygame.K_DOWN:
+                        mdown = False
                         change_block = False
-                # Handle movement
-                keys = pygame.key.get_pressed()
-                if keys[pygame.K_LEFT]:
-                    current_block.move("left")
-                if keys[pygame.K_RIGHT]:
-                    current_block.move("right")
-                if keys[pygame.K_DOWN]:
-                    if not current_block.move("down"):
-                        change_block = True
-                        soft += dt
+
+        # Movement
+        if not mleft and not mright and not mdown:
+            # TODO: The logic makes it possible to keep "momentum" if you switch directions quickly
+            mtime = 0
+            imove = True
+            moving = False
+        else:
+            if imove:
+                mdelay = 0
+                if mtime >= mdelay:
+                    if mleft:
+                        current_block.move("left")
+                    if mright:
+                        current_block.move("right")
+                    if mdown:
+                        if not current_block.move("down"):
+                            change_block = True
+                    imove = False
+                    mtime = 0
+            elif moving:
+                mdelay = 32
+                if mtime >= mdelay:
+                    if mleft:
+                        current_block.move("left")
+                    if mright:
+                        current_block.move("right")
+                    if mdown:
+                        if not current_block.move("down"):
+                            change_block = True
+                    imove = False
+                    mtime = 0
+            else:
+                mdelay = 256
+                if mtime >= mdelay:
+                    if mleft:
+                        current_block.move("left")
+                    if mright:
+                        current_block.move("right")
+                    if mdown:
+                        if not current_block.move("down"):
+                            change_block = True
+                    imove = False
+                    moving = True
+                    mtime = 0
+            mtime += dt
 
         # Block hit ground
         if change_block:
