@@ -522,6 +522,9 @@ def main(win):
             fall_time = 0
             if not current_block.move("down"):
                 lock = True
+            else:
+                lock = False
+                lock_time = 0
 
         if lock:
             lock_time += dt
@@ -560,9 +563,6 @@ def main(win):
                         change_block = True
                         soft += dt
 
-        grid.update(current_block)
-        playfield.update(current_block, next_block, score, high_score, level)
-
         # Block hit ground
         if change_block:
             # Double check if we should really change block.
@@ -577,13 +577,12 @@ def main(win):
                     p = (pos[0], pos[1])
                     grid.locked_positions[p] = current_block.locked_color
 
-                # Handle scoring and redrawing of the screen if rows are removed
+                # Handle scoring
                 lines = grid.clear_rows()
                 if lines > 0:
                     combo += lines
                     score += new_score(lines, level, combo, soft)
                     level += lines
-
                 else:
                     combo = 1
                     level += 1
@@ -612,6 +611,9 @@ def main(win):
 
                 # Lock and ARE delay
                 pygame.time.delay(lock_delay) if lines == 0 else pygame.time.delay(ARE_delay)
+
+        grid.update(current_block)
+        playfield.update(current_block, next_block, score, high_score, level)
 
         if grid.check_lost():
             playfield.draw_text_middle("YOU LOST!", 80, (255,255,255))
