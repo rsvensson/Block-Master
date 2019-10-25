@@ -637,8 +637,8 @@ def main(win):
                 lock_time = 0
 
                 # Check gravity
-                if level <= 500:  # Level 500 and above is max speed
-                    gkeys = list(INTERNAL_GRAVITY.keys())
+                if level < 500:  # Level 500 and above is max speed
+                    gkeys = list(INTERNAL_GRAVITY)
                     for i in range(len(gkeys)):
                         if gkeys[i] == level or gkeys[i] < level < gkeys[i+1]:
                             gravity = DENOMINATOR / INTERNAL_GRAVITY[gkeys[i]]
