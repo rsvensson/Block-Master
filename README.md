@@ -1,4 +1,4 @@
-# Block-Master
+# Block Master
 Falling block puzzle game for Grand Masters
 
 ## About
