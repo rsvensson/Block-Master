@@ -578,43 +578,25 @@ def main(win):
             imove = True
             moving = False
         else:
-            if imove:
-                mdelay = 0
-                if mtime >= mdelay:
-                    if mleft:
-                        current_block.move("left")
-                    if mright:
-                        current_block.move("right")
-                    if mdown:
-                        if not current_block.move("down"):
-                            change_block = True
+            mdelay = 0 if imove else 16 if moving else 256
+            if mtime >= mdelay:
+                if mleft:
+                    current_block.move("left")
+                if mright:
+                    current_block.move("right")
+                if mdown:
+                    if not current_block.move("down"):
+                        change_block = True
+
+                if imove:
                     imove = False
-                    mtime = 0
-            elif moving:
-                mdelay = 32
-                if mtime >= mdelay:
-                    if mleft:
-                        current_block.move("left")
-                    if mright:
-                        current_block.move("right")
-                    if mdown:
-                        if not current_block.move("down"):
-                            change_block = True
+                    moving = False
+                elif moving:
                     imove = False
-                    mtime = 0
-            else:
-                mdelay = 256
-                if mtime >= mdelay:
-                    if mleft:
-                        current_block.move("left")
-                    if mright:
-                        current_block.move("right")
-                    if mdown:
-                        if not current_block.move("down"):
-                            change_block = True
+                else:
                     imove = False
                     moving = True
-                    mtime = 0
+                mtime = 0
             mtime += dt
 
         # Block hit ground
