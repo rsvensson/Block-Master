@@ -5,10 +5,15 @@ import math
 import random
 import pygame
 
-# TODO: Implement grade system
 # TODO: Wall kicks still don't behave quite as they should. Specifically for L, J and T.
 # TODO: Blocks don't fall instantly to the bottom on level 500+.
 # TODO: There's still some occasional glitches with the clear_rows method.
+# TODO: Implement timer display (and use time for determining GM grade)
+# TODO: Make blocks spawn exactly like in TGM
+# TODO: Make IRS work as in TGM
+# TODO: Proper main menu
+# TODO: Settings
+# TODO: High score list
 
 # GLOBALS VARS
 S_WIDTH = 800
@@ -18,7 +23,7 @@ PLAY_HEIGHT = 600
 BLOCK_SIZE = PLAY_WIDTH // 10
 GRID_SIZE = (10, 20)  # 10 x 20 grid
 TOP_LEFT_X = (S_WIDTH - PLAY_WIDTH) // 2
-TOP_LEFT_Y = S_HEIGHT - PLAY_HEIGHT
+TOP_LEFT_Y = S_HEIGHT - PLAY_HEIGHT - 5  # -5 to ensure our drawing methods leave a 5 pixel buffer at the bottom
 MAX_FPS = 60
 
 # COLORS
@@ -188,6 +193,27 @@ INTERNAL_GRAVITY = {0: 4,
                     450: 768,
                     500: 5120}
 
+# Grades (key = score)
+GRADE = {0:      "9",
+         400:    "8",
+         800:    "7",
+         1400:   "6",
+         2000:   "5",
+         3500:   "4",
+         5500:   "3",
+         8000:   "2",
+         12000:  "1",
+         16000:  "S1",
+         22000:  "S2",
+         30000:  "S3",
+         40000:  "S4",
+         52000:  "S5",
+         66000:  "S6",
+         82000:  "S7",
+         100000: "S8",
+         120000: "S9",
+         126000: "GM"}
+
 
 class Block(object):
     def __init__(self, x, y, shape, grid):
@@ -349,7 +375,7 @@ class Playfield(object):
         self.grid = grid
 
     def _draw_next_shape(self, block):
-        font = pygame.font.SysFont("comicsans", 30)
+        font = pygame.font.SysFont(None, 30)
         label = font.render("Next", 1, WHITE)
 
         sx = self.top_left_x + self.pfield_width + 50
@@ -365,15 +391,15 @@ class Playfield(object):
 
         self.surface.blit(label, (sx + 10, sy))
 
-    def _draw_window(self, score=0, last_score=0, level=0):
+    def _draw_window(self, score=0, last_score=0, grade=0, level=0):
         self.surface.fill((0, 0, 0))
         pygame.font.init()
-        font = pygame.font.SysFont('comicsans', 60)
+        font = pygame.font.SysFont(None, 60)
         label = font.render("Block Master", 1, WHITE)
         self.surface.blit(label, (self.top_left_x + self.pfield_width / 2 - label.get_width() / 2, 30))
 
         # Current score
-        font = pygame.font.SysFont("comicsans", 30)
+        font = pygame.font.SysFont(None, 30)
         label = font.render("Score: " + str(score), 1, WHITE)
         sx = self.top_left_x + self.pfield_width + 50
         sy = self.top_left_y + self.pfield_height / 2 + 100
@@ -393,6 +419,12 @@ class Playfield(object):
         sy = self.top_left_y + self.pfield_height / 2 - 100
         self.surface.blit(label, (sx, sy))
 
+        # Grade
+        label = font.render("Grade: " + str(grade), 1, WHITE)
+        sx = self.top_left_x + self.pfield_width + 50
+        sy = self.top_left_y + self.pfield_height / 2 - 125
+        self.surface.blit(label, (sx, sy))
+
         # Blocks
         sx = self.top_left_x
         sy = self.top_left_y
@@ -409,7 +441,7 @@ class Playfield(object):
         pygame.draw.rect(self.surface, RED, (sx, sy, self.pfield_width, self.pfield_height), 5)
 
     def draw_text_middle(self, text, size, color):
-        font = pygame.font.SysFont("comicsans", size, bold=True)
+        font = pygame.font.SysFont(None, size, bold=True)
         label = font.render(text, 1, color)
 
         sx = self.top_left_x
@@ -420,8 +452,8 @@ class Playfield(object):
         pygame.display.update()
 
     def update(self, block: Block, next_block: Block,
-               score=0, high_score=0, level=0):
-        self._draw_window(score, high_score, level)
+               score=0, high_score=0, grade=0, level=0):
+        self._draw_window(score, high_score, grade, level)
         self._draw_next_shape(next_block)
         pygame.display.update()
 
@@ -453,7 +485,7 @@ def get_block(grid, first=False) -> Block:
 
 
 def draw_text_middle(text, size, color, surface):
-    font = pygame.font.SysFont("comicsans", size, bold=True)
+    font = pygame.font.SysFont(None, size, bold=True)
     label = font.render(text, 1, color)
 
     surface.blit(label, (TOP_LEFT_X + PLAY_WIDTH / 2 - (label.get_width() / 2), TOP_LEFT_Y + PLAY_HEIGHT / 2 - label.get_height() * 2))
@@ -491,6 +523,32 @@ def get_score(lines, level=1, combo=1, soft=1, bravo=1):
        bravo: Did the block completely clear the well?"""
 
     return (math.ceil((level + lines) / 4) + soft) * lines * combo * bravo
+
+
+def get_grade(score, t1=None, t2=None, t3=None):
+    """Determines the grade based on score.
+       score: the score to determine grade from.
+       t1: Time to level 300
+       t2: Time to level 500
+       t3: Time to level 999"""
+
+    grade = "9"
+    gscores = list(GRADE)
+    for i, gscore in enumerate(gscores):
+        if gscores[i] < score < gscores[i+1]:
+            grade = GRADE[gscore]
+            break
+
+    if grade is "GM":
+        if t1 is not None and t2 is not None and t3 is not None:
+            # Make sure we pass the time constraints
+            # t1 <= 4:15, t2 <= 7:00, t3 <= 13:30
+            if t1 <= 255 and t2 <= 420 and t3 <= 810:
+                pass
+        else:
+            grade = "S9"
+
+    return grade
 
 
 def main_menu(win):
@@ -540,6 +598,7 @@ def main(win):
     level = 0
     soft = 1
     combo = 1
+    grade = get_grade(score)
 
     # Fall speed
     gravity = DENOMINATOR / INTERNAL_GRAVITY[0]
@@ -649,10 +708,11 @@ def main(win):
                     combo = 1
                     level += 1
                 soft = 1
+                grade = get_grade(score)
 
-                # Update the rows immediately
+                # Update immediately
                 grid.grid = grid.create_grid()
-                playfield.update(current_block, next_block, score, high_score,
+                playfield.update(current_block, next_block, score, high_score, grade,
                                  level-lines-1 if lines == 0 else level-lines)  # Don't update level until next loop
 
                 # Reset variables for next block
@@ -675,7 +735,7 @@ def main(win):
                 pygame.time.delay(lock_delay) if lines == 0 else pygame.time.delay(ARE_delay)
 
         grid.update(current_block)
-        playfield.update(current_block, next_block, score, high_score, level)
+        playfield.update(current_block, next_block, score, high_score, grade, level)
 
         if grid.check_lost():
             playfield.draw_text_middle("YOU LOST!", 80, WHITE)
@@ -696,5 +756,4 @@ if __name__ == "__main__":
     pygame.font.init()
     win = pygame.display.set_mode((S_WIDTH, S_HEIGHT))
     pygame.display.set_caption("Block Master")
-    pygame.key.set_repeat(256, 17)
     main_menu(win)
