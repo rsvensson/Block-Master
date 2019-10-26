@@ -3,33 +3,46 @@ import math
 import pygame
 import random
 
-"""
-10 x 20 square grid
-shapes: S, Z, I, O, J, L, T
-represented in order by 0 - 6
-"""
-
 # TODO: Implement grade system
-# TODO: Wall kicks still don't behave quite as they should
-# TODO: Blocks don't fall instantly to the bottom on level 500+
-# TODO: There's still some occasional glitches with the clear_rows method
-
-pygame.font.init()
+# TODO: Wall kicks still don't behave quite as they should. Specifically for L, J and T.
+# TODO: Blocks don't fall instantly to the bottom on level 500+.
+# TODO: There's still some occasional glitches with the clear_rows method.
 
 # GLOBALS VARS
 S_WIDTH = 800
 S_HEIGHT = 700
-PLAY_WIDTH = 300  # meaning 300 // 10 = 30 width per block
-PLAY_HEIGHT = 600  # meaning 600 // 20 = 20 height per block
-BLOCK_SIZE = 300 // 10
+PLAY_WIDTH = 300
+PLAY_HEIGHT = 600
+BLOCK_SIZE = PLAY_WIDTH // 10
 GRID_SIZE = (10, 20)  # 10 x 20 grid
 TOP_LEFT_X = (S_WIDTH - PLAY_WIDTH) // 2
 TOP_LEFT_Y = S_HEIGHT - PLAY_HEIGHT
 MAX_FPS = 60
 
+# COLORS
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GRAY = (128, 128, 128)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+# TGM Colors
+SCOLOR = (141, 0, 141)
+ZCOLOR = (0, 148, 0)
+ICOLOR = (200, 20, 10)
+OCOLOR = (200, 200, 0)
+JCOLOR = (0, 32, 190)
+LCOLOR = (200, 85, 0)
+TCOLOR = (0, 130, 175)
+SLOCKED = (90, 0, 90)
+ZLOCKED = (0, 80, 0)
+ILOCKED = (125, 0, 0)
+OLOCKED = (90, 90, 0)
+JLOCKED = (0, 15, 110)
+LLOCKED = (90, 40, 0)
+TLOCKED = (0, 70, 100)
 
 # SHAPE FORMATS
-
 S = [['.....',
       '......',
       '..00..',
@@ -132,12 +145,13 @@ T = [['.....',
       '..0..',
       '.....']]
 
-shapes = [S, Z, I, O, J, L, T]
-shape_colors = [(141, 0, 141), (0, 148, 0), (200, 20, 10), (200, 200, 0), (0, 32, 190), (200, 85, 0), (0, 130, 175)]
-shape_colors_locked = [(90, 0, 90), (0, 80, 0), (125, 0, 0), (90, 90, 0), (0, 15, 110), (90, 40, 0), (0, 70, 100)]
 # index 0 - 6 represent shape
+SHAPES = [S, Z, I, O, J, L, T]
+SHAPE_COLORS = [SCOLOR, ZCOLOR, ICOLOR, OCOLOR, JCOLOR, LCOLOR, TCOLOR]
+SHAPE_COLORS_LOCKED = [SLOCKED, ZLOCKED, ILOCKED, OLOCKED, JLOCKED, LLOCKED, TLOCKED]
 
-bag = [1, 1, 1, 1]  # Start bag with 4 Z pieces, emulating TGM1
+# Start bag with 4 Z blocks, emulating TGM1
+BAG = [1, 1, 1, 1]
 
 # Gravity
 DENOMINATOR = 256
@@ -179,8 +193,8 @@ class Block(object):
         self.y = y
         self.shape = shape
         self.grid = grid
-        self.color = shape_colors[shapes.index(shape)]
-        self.locked_color = shape_colors_locked[shapes.index(shape)]
+        self.color = SHAPE_COLORS[SHAPES.index(shape)]
+        self.locked_color = SHAPE_COLORS_LOCKED[SHAPES.index(shape)]
         self.rotation = 0
 
     def move(self, direction):
@@ -269,7 +283,7 @@ class Grid(object):
         self.grid = self.create_grid()
 
     def create_grid(self):
-        grid = [[(0,0,0) for x in range(GRID_SIZE[0])] for x in range(GRID_SIZE[1])]
+        grid = [[BLACK for x in range(GRID_SIZE[0])] for x in range(GRID_SIZE[1])]
 
         for i in range(len(grid)):
             for j in range(len(grid[i])):
@@ -285,7 +299,7 @@ class Grid(object):
         inc = 0  # How many rows were removed
         for i in range(len(self.grid) - 1, -1, -1):  # Start check grid from below
             row = self.grid[i]
-            if (0, 0, 0) not in row:
+            if BLACK not in row:
                 inc += 1
                 rows.append(i)  # Index of row that is removed
                 for j in range(len(row)):
@@ -334,7 +348,7 @@ class Playfield(object):
 
     def _draw_next_shape(self, block):
         font = pygame.font.SysFont("comicsans", 30)
-        label = font.render("Next", 1, (255,255,255))
+        label = font.render("Next", 1, WHITE)
 
         sx = self.top_left_x + self.pfield_width + 50
         sy = self.top_left_y
@@ -345,7 +359,7 @@ class Playfield(object):
             for j, col in enumerate(row):
                 if col == "0":
                     pygame.draw.rect(self.surface, block.color, (sx + j * BLOCK_SIZE, sy + i * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE), 0)
-                    pygame.draw.rect(self.surface, (200,200,200), (sx + j * BLOCK_SIZE, sy + i * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE), 1)
+                    pygame.draw.rect(self.surface, WHITE, (sx + j * BLOCK_SIZE, sy + i * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE), 1)
 
         self.surface.blit(label, (sx + 10, sy))
 
@@ -353,26 +367,26 @@ class Playfield(object):
         self.surface.fill((0, 0, 0))
         pygame.font.init()
         font = pygame.font.SysFont('comicsans', 60)
-        label = font.render("Block Master", 1, (255, 255, 255))
+        label = font.render("Block Master", 1, WHITE)
         self.surface.blit(label, (self.top_left_x + self.pfield_width / 2 - label.get_width() / 2, 30))
 
         # Current score
         font = pygame.font.SysFont("comicsans", 30)
-        label = font.render("Score: " + str(score), 1, (255, 255, 255))
+        label = font.render("Score: " + str(score), 1, WHITE)
         sx = self.top_left_x + self.pfield_width + 50
         sy = self.top_left_y + self.pfield_height / 2 + 100
         self.surface.blit(label, (sx, sy))
 
         # High score
-        label = font.render("High Score:", 1, (255, 255, 255))
-        highscore = font.render(str(last_score), 1, (255, 255, 255))
+        label = font.render("High Score:", 1, WHITE)
+        highscore = font.render(str(last_score), 1, WHITE)
         sx = self.top_left_x + self.pfield_width + 50
         sy = self.top_left_y + self.pfield_height / 2
         self.surface.blit(label, (sx, sy))
         self.surface.blit(highscore, (sx, sy + 20))
 
         # Level
-        label = font.render("Level: " + str(level), 1, (255, 255, 255))
+        label = font.render("Level: " + str(level), 1, WHITE)
         sx = self.top_left_x + self.pfield_width + 50
         sy = self.top_left_y + self.pfield_height / 2 - 100
         self.surface.blit(label, (sx, sy))
@@ -384,16 +398,13 @@ class Playfield(object):
             for j in range(len(self.grid.grid[i])):
                 pygame.draw.rect(self.surface, self.grid.grid[i][j],
                                  (sx + j * self.block_size, sy + i * self.block_size, self.block_size, self.block_size), 0)
-                if not self.grid.grid[i][j] == (0, 0, 0):  # Draw white lines on blocks
-                    line_color = (200, 200, 200)
-                    if self.grid.grid[i][j] in shape_colors_locked:
-                        line_color = (128, 128, 128)
-
+                if not self.grid.grid[i][j] == BLACK:  # Draw white or gray lines on blocks
+                    line_color = WHITE if self.grid.grid[i][j] in SHAPE_COLORS else GRAY
                     pygame.draw.rect(self.surface, line_color,
                                      (sx + j * self.block_size, sy + i * self.block_size, self.block_size, self.block_size), 1)
 
         # Playfield border
-        pygame.draw.rect(self.surface, (255, 0, 0), (sx, sy, self.pfield_width, self.pfield_height), 5)
+        pygame.draw.rect(self.surface, RED, (sx, sy, self.pfield_width, self.pfield_height), 5)
 
     def draw_text_middle(self, text, size, color):
         font = pygame.font.SysFont("comicsans", size, bold=True)
@@ -426,15 +437,15 @@ def get_block(grid, first=False) -> Block:
         new = Block(x, y, random.choice([I, J, L, T]), grid)
     else:
         for i in range(4):
-            new = Block(x, y, random.choice(shapes), grid)
-            if new.shape in bag:
+            new = Block(x, y, random.choice(SHAPES), grid)
+            if new.shape in BAG:
                 continue
             else:
                 break
 
     # Update bag
-    bag.insert(0, new.shape)
-    bag.pop()
+    BAG.insert(0, new.shape)
+    BAG.pop()
 
     return new
 
@@ -652,19 +663,20 @@ def main(win):
         playfield.update(current_block, next_block, score, high_score, level)
 
         if grid.check_lost():
-            playfield.draw_text_middle("YOU LOST!", 80, (255,255,255))
+            playfield.draw_text_middle("YOU LOST!", 80, WHITE)
             pygame.time.delay(2000)
             update_score(score)
             run = False
 
         if level == 1000:
-            playfield.draw_text_middle("YOU WON!!", 80, (255,255,255))
+            playfield.draw_text_middle("YOU WON!!", 80, WHITE)
             pygame.time.delay(2000)
             update_score(score)
             run = False
 
 
 if __name__ == "__main__":
+    pygame.font.init()
     win = pygame.display.set_mode((S_WIDTH, S_HEIGHT))
     pygame.display.set_caption("Block Master")
     pygame.key.set_repeat(256, 17)
