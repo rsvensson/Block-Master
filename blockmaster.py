@@ -1,7 +1,9 @@
-import math
+#!/usr/bin/env python
 
-import pygame
+import os
+import math
 import random
+import pygame
 
 # TODO: Implement grade system
 # TODO: Wall kicks still don't behave quite as they should. Specifically for L, J and T.
@@ -457,33 +459,45 @@ def draw_text_middle(text, size, color, surface):
     surface.blit(label, (TOP_LEFT_X + PLAY_WIDTH / 2 - (label.get_width() / 2), TOP_LEFT_Y + PLAY_HEIGHT / 2 - label.get_height() * 2))
 
 
-def update_score(nscore):
-    score = max_score()
+def set_highscore(score):
+    """Write high score to disk"""
+    try:
+        f = open("data/score.txt", "w+")
+    except FileNotFoundError:
+        os.mkdir("data", 0o755)
+        f = open("data/score.txt", "w+")
 
-    with open("data/score.txt", "w") as f:
-        if score > nscore:
-            f.write(str(score))
-        else:
-            f.write(str(nscore))
+    f.write(str(score))
+    f.close()
 
-
-def max_score():
-    with open("data/score.txt", "r") as f:
-        lines = f.readlines()
-        score = lines[0].strip()
+def get_highscore():
+    """Read high score from disk"""
+    try:
+        with open("data/score.txt", "r") as f:
+            lines = f.readlines()
+            score = lines[0].strip()
+    except FileNotFoundError:
+        return 0
 
     return int(score)
 
 
-def new_score(lines, level=1, combo=1, soft=1, bravo=1):
-    return math.ceil(((level + lines) / 4) + soft) * lines * combo * bravo
+def get_score(lines, level=1, combo=1, soft=1, bravo=1):
+    """Calculates score depending on lines cleared, current level, combos etc.
+       lines: How many lines were cleared.
+       level: Which level we're at.
+       combo: How many blocks in a row that have cleared lines.
+       soft: How many frames the player pressed down.
+       bravo: Did the block completely clear the well?"""
+
+    return (math.ceil((level + lines) / 4) + soft) * lines * combo * bravo
 
 
 def main_menu(win):
     run = True
     while run:
-        win.fill((0,0,0))
-        draw_text_middle("Press Any Key To Play", 60, (255,255,255), win)
+        win.fill(BLACK)
+        draw_text_middle("Press Any Key To Play", 60, WHITE, win)
         pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:
@@ -521,7 +535,7 @@ def main(win):
     mtime = 0
 
     # Scoring variables
-    high_score = max_score()
+    high_score = get_highscore()
     score = 0
     level = 0
     soft = 1
@@ -627,8 +641,9 @@ def main(win):
                 # Handle scoring
                 lines = grid.clear_rows()
                 if lines > 0:
-                    combo += lines
-                    score += new_score(lines, level, combo, soft)
+                    bravo = 4 if len(grid.locked_positions) == 0 else 1
+                    combo += 2*lines-2 if combo > 1 else lines
+                    score += get_score(lines, level, combo, soft, bravo)
                     level += lines
                 else:
                     combo = 1
@@ -665,14 +680,16 @@ def main(win):
         if grid.check_lost():
             playfield.draw_text_middle("YOU LOST!", 80, WHITE)
             pygame.time.delay(2000)
-            update_score(score)
             run = False
 
         if level == 1000:
             playfield.draw_text_middle("YOU WON!!", 80, WHITE)
             pygame.time.delay(2000)
-            update_score(score)
             run = False
+
+    # Write new high score to file
+    if score > high_score:
+        set_highscore(score)
 
 
 if __name__ == "__main__":
